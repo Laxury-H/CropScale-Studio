@@ -2,7 +2,10 @@
 
 > **Trình Cắt (Crop), Co Giãn (Scale) & Đổi Kích Thước (Resize) Ảnh Hàng Loạt Đa Năng Cho Mọi Ngành Nghề**
 
+[![Live Demo](https://img.shields.io/badge/🌐_Website_Trực_Tuyến-cropscale--studio.onrender.com-success?style=for-the-badge&logo=render&logoColor=white)](https://cropscale-studio.onrender.com/)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Laxury-H/CropScale-Studio)
+
+👉 **Dùng ngay trên trình duyệt (không cần cài đặt):** [https://cropscale-studio.onrender.com/](https://cropscale-studio.onrender.com/)
 
 ![CropScale Studio](public/favicon.svg)
 
