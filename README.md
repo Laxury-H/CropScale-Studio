@@ -2,6 +2,8 @@
 
 > **Trình Cắt (Crop), Co Giãn (Scale) & Đổi Kích Thước (Resize) Ảnh Hàng Loạt Đa Năng Cho Mọi Ngành Nghề**
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Laxury-H/CropScale-Studio)
+
 ![CropScale Studio](public/favicon.svg)
 
 **CropScale Studio** là công cụ xử lý ảnh chuyên nghiệp hoạt động trực tiếp trên trình duyệt (100% Client-Side, chạy offline, bảo mật tuyệt đối). Ứng dụng giải quyết triệt để vấn đề méo ảnh, vỡ hình khi đưa ảnh vào các khung chuẩn cho Thương mại điện tử (Shopee, TikTok Shop, Lazada), Mạng xã hội (Facebook, Instagram, TikTok), Catalog nội thất, quảng cáo và vách CNC.
@@ -75,6 +77,18 @@ npm run build
 ```
 
 Mở trình duyệt tại: `http://localhost:5173`
+
+## 🌐 Triển Khai Lên Render (Render.com)
+
+Dự án đã được cấu hình sẵn file `render.yaml` và `_redirects` để triển khai dưới dạng **Static Site (Miễn phí 100%, có HTTPS, CDN toàn cầu)**:
+
+1. Đăng nhập vào [Render.com](https://render.com/).
+2. Chọn **New +** → **Static Site**.
+3. Kết nối với repository GitHub: `Laxury-H/CropScale-Studio`.
+4. Render sẽ tự động nhận diện cấu hình:
+   - **Build Command:** `npm install && npm run build`
+   - **Publish Directory:** `dist`
+5. Nhấn **Create Static Site** và ứng dụng sẽ trực tuyến sau 1 phút!
 
 ---
 
