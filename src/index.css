@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  
+  * {
+    border-color: #22262b;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #141618;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a3038;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b434e;
+}
+
+/* Checkerboard pattern for transparent canvas preview */
+.canvas-checkerboard {
+  background-color: #1a1d20;
+  background-image: 
+    linear-gradient(45deg, #242930 25%, transparent 25%), 
+    linear-gradient(-45deg, #242930 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #242930 75%), 
+    linear-gradient(-45deg, transparent 75%, #242930 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+
+.canvas-checkerboard-dense {
+  background-color: #141618;
+  background-image: 
+    linear-gradient(45deg, #1c2024 25%, transparent 25%), 
+    linear-gradient(-45deg, #1c2024 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #1c2024 75%), 
+    linear-gradient(-45deg, transparent 75%, #1c2024 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+}
+
+/* Custom canvas grab cursor */
+.cursor-grab {
+  cursor: grab;
+}
+.cursor-grabbing {
+  cursor: grabbing;
+}
