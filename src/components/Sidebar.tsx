@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { 
   Plus, 
   FolderPlus, 
@@ -9,7 +9,9 @@ import {
   Square, 
   ArrowUpDown,
   Download,
-  ClipboardPaste
+  ClipboardPaste,
+  Pencil,
+  Sparkles
 } from 'lucide-react';
 import type { ImageItem } from '../types';
 
@@ -24,6 +26,8 @@ interface SidebarProps {
   onExportSelected: () => void;
   onToggleSelectAll: () => void;
   onPasteFromClipboard: () => void;
+  onRenameImage: (id: string, newName: string) => void;
+  onOpenSmartRename: () => void;
 }
 
 type SortField = 'name' | 'size' | 'status';
@@ -39,12 +43,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onExportSelected,
   onToggleSelectAll,
   onPasteFromClipboard,
+  onRenameImage,
+  onOpenSmartRename,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortAsc, setSortAsc] = useState(true);
+
+  // Inline editing state (Double-click / double-tap rename)
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const lastTapRef = useRef<{ id: string; time: number }>({ id: '', time: 0 });
+
+  const startEditing = (img: ImageItem) => {
+    setEditingId(img.id);
+    setEditingName(img.name);
+  };
+
+  const saveEditing = () => {
+    if (editingId) {
+      const trimmed = editingName.trim();
+      const currentImg = images.find((i) => i.id === editingId);
+      if (trimmed && currentImg && trimmed !== currentImg.name) {
+        onRenameImage(editingId, trimmed);
+      }
+    }
+    setEditingId(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      const dotIdx = editInputRef.current.value.lastIndexOf('.');
+      if (dotIdx > 0) {
+        editInputRef.current.setSelectionRange(0, dotIdx);
+      } else {
+        editInputRef.current.select();
+      }
+    }
+  }, [editingId]);
+
+  const handleTouchEnd = (img: ImageItem) => {
+    const now = Date.now();
+    if (lastTapRef.current.id === img.id && now - lastTapRef.current.time < 350) {
+      startEditing(img);
+    }
+    lastTapRef.current = { id: img.id, time: now };
+  };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -177,21 +229,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Multi-Select Toolbar (When images exist) */}
         {images.length > 0 && (
           <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400">
-            <button
-              onClick={onToggleSelectAll}
-              className="flex items-center space-x-1.5 hover:text-slate-200 transition-colors"
-            >
-              {allSelected ? (
-                <CheckSquare className="w-3.5 h-3.5 text-blue-400" />
-              ) : (
-                <Square className="w-3.5 h-3.5 text-slate-500" />
-              )}
-              <span>
-                {selectedIds.size > 0
-                  ? `Đã chọn ${selectedIds.size} / ${images.length}`
-                  : `Tất cả (${images.length})`}
-              </span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={onToggleSelectAll}
+                className="flex items-center space-x-1.5 hover:text-slate-200 transition-colors"
+              >
+                {allSelected ? (
+                  <CheckSquare className="w-3.5 h-3.5 text-blue-400" />
+                ) : (
+                  <Square className="w-3.5 h-3.5 text-slate-500" />
+                )}
+                <span>
+                  {selectedIds.size > 0
+                    ? `Đã chọn ${selectedIds.size} / ${images.length}`
+                    : `Tất cả (${images.length})`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenSmartRename}
+                className="px-1.5 py-0.5 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-colors flex items-center space-x-1"
+                title="Mở công cụ đổi tên thông minh hàng loạt (dải số 1-10, công thức...)"
+              >
+                <Sparkles className="w-3 h-3 text-purple-400" />
+                <span className="font-medium">Đổi tên loạt</span>
+              </button>
+            </div>
 
             {selectedIds.size > 0 && (
               <div className="flex items-center space-x-1">
@@ -295,11 +359,63 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 {/* Metadata */}
-                <div className="ml-2.5 flex-1 min-w-0">
+                <div 
+                  className="ml-2.5 flex-1 min-w-0"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    startEditing(img);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    handleTouchEnd(img);
+                  }}
+                >
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-slate-200 truncate group-hover:text-blue-300">
-                      {img.name}
-                    </p>
+                    {editingId === img.id ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          saveEditing();
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full mr-1"
+                      >
+                        <input
+                          ref={editInputRef}
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onBlur={saveEditing}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              e.stopPropagation();
+                              cancelEditing();
+                            }
+                          }}
+                          className="w-full px-1.5 py-0.5 text-xs bg-[#101214] border border-blue-500 rounded text-slate-100 focus:outline-none font-medium shadow-inner"
+                        />
+                      </form>
+                    ) : (
+                      <div className="flex items-center justify-between w-full group/name">
+                        <p 
+                          className="text-xs font-medium text-slate-200 truncate group-hover:text-blue-300"
+                          title={`${img.name}\n(Nhấn đúp hoặc chạm 2 lần để đổi tên)`}
+                        >
+                          {img.name}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditing(img);
+                          }}
+                          className="opacity-0 group-hover/name:opacity-100 p-0.5 rounded hover:bg-[#252b33] text-slate-400 hover:text-blue-300 transition-opacity ml-1 shrink-0"
+                          title="Đổi tên ảnh này"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2 mt-0.5 text-[10px] text-slate-400">
                     <span className="font-mono">

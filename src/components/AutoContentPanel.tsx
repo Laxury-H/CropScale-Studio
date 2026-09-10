@@ -21,6 +21,8 @@ interface AutoContentPanelProps {
   onUpdateContentBox: (box: ImageItem['contentBox']) => void;
   showContentBox: boolean;
   onToggleShowContentBox: () => void;
+  onBatchAutoFit?: () => void;
+  imagesCount?: number;
 }
 
 export const AutoContentPanel: React.FC<AutoContentPanelProps> = ({
@@ -34,6 +36,8 @@ export const AutoContentPanel: React.FC<AutoContentPanelProps> = ({
   onUpdateContentBox,
   showContentBox,
   onToggleShowContentBox,
+  onBatchAutoFit,
+  imagesCount,
 }) => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectionMessage, setDetectionMessage] = useState<string | null>(null);
@@ -205,6 +209,26 @@ export const AutoContentPanel: React.FC<AutoContentPanelProps> = ({
           <Maximize2 className="w-3.5 h-3.5 text-white" />
           <span>Fit Mẫu + Lề</span>
         </button>
+      </div>
+
+      {/* Batch Fit All button (when multiple images exist) */}
+      {onBatchAutoFit && (imagesCount || 0) > 1 && (
+        <button
+          type="button"
+          onClick={onBatchAutoFit}
+          disabled={isDetecting}
+          className="w-full mt-1.5 py-1.5 px-2 rounded-lg text-xs font-medium bg-[#20252c] hover:bg-[#28303a] text-amber-300 border border-amber-500/30 transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
+          title="Tự động căn giữa mẫu & fit lề cho tất cả các ảnh theo tỉ lệ hiện tại"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>Fit mẫu & lề tất cả ({imagesCount} ảnh)</span>
+        </button>
+      )}
+
+      {/* Auto fit notification badge */}
+      <div className="pt-1 flex items-center space-x-1.5 text-[11px] text-slate-400">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+        <span>Ảnh dán (Ctrl+V) sẽ tự động căn giữa & fit lề</span>
       </div>
 
       {/* Feedback message */}

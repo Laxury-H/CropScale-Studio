@@ -1,10 +1,10 @@
-import type { ContentBoundingBox, ContentDetectionSettings, FrameSettings } from '../types';
+import type { ContentBoundingBox, ContentDetectionSettings, FrameSettings, TransformState } from '../types';
 
 /**
  * Scans an HTMLImageElement or ImageBitmap to find the bounding box of non-background content
  */
 export async function detectContentBoundingBox(
-  imageSource: HTMLImageElement | ImageBitmap,
+  imageSource: HTMLImageElement | ImageBitmap | HTMLCanvasElement,
   settings: ContentDetectionSettings
 ): Promise<ContentBoundingBox | null> {
   const origW = imageSource.width;
@@ -156,5 +156,47 @@ export function calculateContentTransform(
     x: Math.round(x * 10) / 10,
     y: Math.round(y * 10) / 10,
     scale: Math.round(scale * 1000) / 1000,
+  };
+}
+
+/**
+ * Automatically fits and centers content or image inside the frame respecting margins/padding
+ */
+export async function autoDetectAndFitTransform(
+  imageElement: HTMLImageElement | ImageBitmap | HTMLCanvasElement,
+  origW: number,
+  origH: number,
+  frame: FrameSettings,
+  settings: ContentDetectionSettings
+): Promise<{ transform: TransformState; contentBox?: ContentBoundingBox }> {
+  const padding = {
+    top: settings.paddingTop,
+    bottom: settings.paddingBottom,
+    left: settings.paddingLeft,
+    right: settings.paddingRight,
+  };
+
+  const detectedBox = await detectContentBoundingBox(imageElement, settings);
+  const targetBox = detectedBox || {
+    minX: 0,
+    minY: 0,
+    maxX: origW,
+    maxY: origH,
+    width: origW,
+    height: origH,
+  };
+
+  const fitResult = calculateContentTransform(targetBox, origW, origH, frame, padding, 'fit');
+
+  return {
+    transform: {
+      x: fitResult.x,
+      y: fitResult.y,
+      scale: fitResult.scale,
+      rotation: 0,
+      flipX: false,
+      flipY: false,
+    },
+    contentBox: detectedBox || undefined,
   };
 }

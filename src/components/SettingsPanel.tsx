@@ -44,6 +44,8 @@ interface SettingsPanelProps {
   onPasteTransform: () => void;
   canPasteTransform: boolean;
   onApplyTransformToAll: () => void;
+  onBatchAutoFit?: () => void;
+  imagesCount?: number;
 }
 
 const ASPECT_RATIOS: { label: string; value: AspectRatioPreset; w?: number; h?: number }[] = [
@@ -81,6 +83,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onPasteTransform,
   canPasteTransform,
   onApplyTransformToAll,
+  onBatchAutoFit,
+  imagesCount,
 }) => {
   const [copiedNotification, setCopiedNotification] = useState(false);
 
@@ -273,6 +277,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             onUpdateContentBox={onUpdateContentBox}
             showContentBox={showContentBox}
             onToggleShowContentBox={onToggleShowContentBox}
+            onBatchAutoFit={onBatchAutoFit}
+            imagesCount={imagesCount}
           />
         </div>
 

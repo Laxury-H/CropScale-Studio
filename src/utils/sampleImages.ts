@@ -1,4 +1,5 @@
-import type { ImageItem } from '../types';
+import type { ContentDetectionSettings, FrameSettings, ImageItem } from '../types';
+import { autoDetectAndFitTransform } from './contentDetector';
 
 // Helper to render an SVG string onto a high-res canvas and return a Blob & DataURL
 async function createSampleImageItem(
@@ -6,7 +7,9 @@ async function createSampleImageItem(
   name: string,
   svgContent: string,
   width: number,
-  height: number
+  height: number,
+  frame?: FrameSettings,
+  detectionSettings?: ContentDetectionSettings
 ): Promise<ImageItem> {
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -39,6 +42,28 @@ async function createSampleImageItem(
   thumbCtx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
   const thumbnailUrl = thumbCanvas.toDataURL('image/png', 0.85);
 
+  let initialTransform = {
+    x: 0,
+    y: 0,
+    scale: 1,
+    rotation: 0,
+    flipX: false,
+    flipY: false,
+  };
+  let contentBox = undefined;
+  let status: ImageItem['status'] = 'not_edited';
+
+  if (frame && detectionSettings) {
+    try {
+      const fitResult = await autoDetectAndFitTransform(canvas, width, height, frame, detectionSettings);
+      initialTransform = fitResult.transform;
+      contentBox = fitResult.contentBox;
+      status = 'edited';
+    } catch (err) {
+      console.warn('Auto fit margin calculation failed on demo image:', err);
+    }
+  }
+
   return {
     id,
     name,
@@ -48,19 +73,16 @@ async function createSampleImageItem(
     aspectRatio: width / height,
     blobUrl,
     thumbnailUrl,
-    transform: {
-      x: 0,
-      y: 0,
-      scale: 1,
-      rotation: 0,
-      flipX: false,
-      flipY: false,
-    },
-    status: 'not_edited',
+    transform: initialTransform,
+    contentBox,
+    status,
   };
 }
 
-export async function generateDemoImages(): Promise<ImageItem[]> {
+export async function generateDemoImages(
+  frame?: FrameSettings,
+  detectionSettings?: ContentDetectionSettings
+): Promise<ImageItem[]> {
   // Demo 1: Tall Geometric CNC Screen (468x716 like the user's paint example!)
   const svg1 = `
     <svg xmlns="http://www.w3.org/2000/svg" width="468" height="716" viewBox="0 0 468 716">
@@ -120,8 +142,8 @@ export async function generateDemoImages(): Promise<ImageItem[]> {
   `;
 
   return Promise.all([
-    createSampleImageItem('demo-1', '01_Vach_CNC_Hinh_Hoc_468x716.png', svg1, 468, 716),
-    createSampleImageItem('demo-2', '02_Vach_CNC_Hoa_Sen_600x800.png', svg2, 600, 800),
-    createSampleImageItem('demo-3', '03_Vach_CNC_Nan_Go_800x1200.png', svg3, 800, 1200),
+    createSampleImageItem('demo-1', '01_Vach_CNC_Hinh_Hoc_468x716.png', svg1, 468, 716, frame, detectionSettings),
+    createSampleImageItem('demo-2', '02_Vach_CNC_Hoa_Sen_600x800.png', svg2, 600, 800, frame, detectionSettings),
+    createSampleImageItem('demo-3', '03_Vach_CNC_Nan_Go_800x1200.png', svg3, 800, 1200, frame, detectionSettings),
   ]);
 }

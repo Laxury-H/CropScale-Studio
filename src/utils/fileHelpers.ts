@@ -1,16 +1,22 @@
-import type { ImageItem, ProjectData } from '../types';
+import type { ContentDetectionSettings, FrameSettings, ImageItem, ProjectData } from '../types';
+import { autoDetectAndFitTransform } from './contentDetector';
 
 /**
- * Creates an ImageItem from a user-uploaded File
+ * Creates an ImageItem from a user-uploaded File.
+ * If frame & detectionSettings are provided, automatically centers and fits the subject/margins.
  */
-export async function createImageItemFromFile(file: File): Promise<ImageItem> {
+export async function createImageItemFromFile(
+  file: File,
+  frame?: FrameSettings,
+  detectionSettings?: ContentDetectionSettings
+): Promise<ImageItem> {
   const blobUrl = URL.createObjectURL(file);
 
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
-    img.onload = () => {
+    img.onload = async () => {
       const origW = img.naturalWidth || img.width;
       const origH = img.naturalHeight || img.height;
 
@@ -29,6 +35,28 @@ export async function createImageItemFromFile(file: File): Promise<ImageItem> {
       }
       const thumbnailUrl = thumbCanvas.toDataURL('image/jpeg', 0.85);
 
+      let initialTransform = {
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotation: 0,
+        flipX: false,
+        flipY: false,
+      };
+      let contentBox = undefined;
+      let status: ImageItem['status'] = 'not_edited';
+
+      if (frame && detectionSettings) {
+        try {
+          const fitResult = await autoDetectAndFitTransform(img, origW, origH, frame, detectionSettings);
+          initialTransform = fitResult.transform;
+          contentBox = fitResult.contentBox;
+          status = 'edited';
+        } catch (err) {
+          console.warn('Auto fit margin calculation failed, using default transform:', err);
+        }
+      }
+
       resolve({
         id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         name: file.name,
@@ -39,15 +67,9 @@ export async function createImageItemFromFile(file: File): Promise<ImageItem> {
         file,
         blobUrl,
         thumbnailUrl,
-        transform: {
-          x: 0,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          flipX: false,
-          flipY: false,
-        },
-        status: 'not_edited',
+        transform: initialTransform,
+        contentBox,
+        status,
       });
     };
 

@@ -42,7 +42,9 @@ import { ExportModal } from './components/ExportModal';
 import { PresetsModal } from './components/PresetsModal';
 import { EmptyState } from './components/EmptyState';
 import { LogoSelectorModal } from './components/LogoSelectorModal';
+import { SmartRenameModal } from './components/SmartRenameModal';
 import { getLogoSvgString, type LogoVariant } from './components/CropScaleLogo';
+import { autoDetectAndFitTransform } from './utils/contentDetector';
 
 export function App() {
   // 1. Settings State
@@ -73,6 +75,7 @@ export function App() {
     return (localStorage.getItem('cropscale_logo_variant') as LogoVariant) || 'brackets';
   });
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
+  const [isSmartRenameModalOpen, setIsSmartRenameModalOpen] = useState(false);
 
   // Sync favicon with chosen logo variant
   useEffect(() => {
@@ -365,12 +368,12 @@ export function App() {
     }
   }, [images, selectedIds]);
 
-  // File additions
+  // File additions - automatically centers and fits subject/margins based on current frame & detectionSettings
   const handleAddFiles = useCallback(async (files: File[]) => {
     const newItems: ImageItem[] = [];
     for (const file of files) {
       try {
-        const item = await createImageItemFromFile(file);
+        const item = await createImageItemFromFile(file, frame, detectionSettings);
         newItems.push(item);
       } catch (err) {
         console.error(`Không thể nạp file ${file.name}:`, err);
@@ -387,7 +390,66 @@ export function App() {
       setActiveImageId((curr) => curr || newItems[0].id);
       setSelectedIds((curr) => (curr.size > 0 ? curr : new Set([newItems[0].id])));
     }
+  }, [frame, detectionSettings]);
+
+  // Rename single image (inline edit from Sidebar)
+  const handleRenameImage = useCallback((id: string, newName: string) => {
+    setImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, name: newName } : img))
+    );
+    setToastMessage(`Đã đổi tên: ${newName}`);
+    setTimeout(() => setToastMessage(null), 2500);
   }, []);
+
+  // Batch rename images from SmartRenameModal
+  const handleBatchRenameImages = useCallback((renamedMap: Map<string, string>) => {
+    setImages((prev) =>
+      prev.map((img) => {
+        const newName = renamedMap.get(img.id);
+        return newName ? { ...img, name: newName } : img;
+      })
+    );
+    setToastMessage(`Đã đổi tên thông minh thành công cho ${renamedMap.size} ảnh!`);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  // Batch auto fit all images to frame margins
+  const handleBatchAutoFit = useCallback(async () => {
+    if (images.length === 0) return;
+    setToastMessage(`Đang tự động căn giữa mẫu & fit lề cho ${images.length} ảnh...`);
+    try {
+      const updatedImages = await Promise.all(
+        images.map(async (img) => {
+          try {
+            const imgEl = await loadImageElement(img.blobUrl);
+            const fitResult = await autoDetectAndFitTransform(
+              imgEl,
+              img.originalWidth,
+              img.originalHeight,
+              frame,
+              detectionSettings
+            );
+            return {
+              ...img,
+              transform: fitResult.transform,
+              contentBox: fitResult.contentBox,
+              status: 'edited' as const,
+            };
+          } catch (e) {
+            console.warn(`Lỗi khi fit ảnh ${img.name}:`, e);
+            return img;
+          }
+        })
+      );
+      setImages(updatedImages);
+      setToastMessage(`Đã căn giữa mẫu & fit lề thành công cho ${images.length} ảnh!`);
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      console.error(err);
+      setToastMessage('Lỗi khi căn giữa & fit lề hàng loạt.');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  }, [images, frame, detectionSettings]);
 
   // Clipboard Paste helper function (for button or API invocation)
   const handlePasteFromClipboard = useCallback(async () => {
@@ -469,14 +531,14 @@ export function App() {
   // Demo Load
   const handleLoadDemo = useCallback(async () => {
     try {
-      const demoItems = await generateDemoImages();
+      const demoItems = await generateDemoImages(frame, detectionSettings);
       setImages((prev) => [...prev, ...demoItems]);
       setActiveImageId(demoItems[0].id);
       setSelectedIds(new Set([demoItems[0].id]));
     } catch (err) {
       console.error('Failed to load demo images', err);
     }
-  }, []);
+  }, [frame, detectionSettings]);
 
   // Remove Images
   const handleRemoveImages = useCallback((idsToRemove: string[]) => {
@@ -824,6 +886,8 @@ export function App() {
           onExportSelected={() => handleOpenBatchExport(true)}
           onToggleSelectAll={handleToggleSelectAll}
           onPasteFromClipboard={handlePasteFromClipboard}
+          onRenameImage={handleRenameImage}
+          onOpenSmartRename={() => setIsSmartRenameModalOpen(true)}
         />
 
         {/* Center: Canvas Viewport / Empty State */}
@@ -909,6 +973,8 @@ export function App() {
           onPasteTransform={handlePasteTransform}
           canPasteTransform={!!copiedTransform}
           onApplyTransformToAll={handleApplyTransformToAll}
+          onBatchAutoFit={handleBatchAutoFit}
+          imagesCount={images.length}
         />
       </div>
 
@@ -948,6 +1014,16 @@ export function App() {
         currentVariant={logoVariant}
         onSelectVariant={handleSelectLogoVariant}
         onClose={() => setIsLogoModalOpen(false)}
+      />
+
+      {/* 6. Smart Rename Modal (Batch sequence & pattern renaming) */}
+      <SmartRenameModal
+        isOpen={isSmartRenameModalOpen}
+        onClose={() => setIsSmartRenameModalOpen(false)}
+        images={images}
+        selectedIds={selectedIds}
+        frame={frame}
+        onApplyRename={handleBatchRenameImages}
       />
     </div>
   );
